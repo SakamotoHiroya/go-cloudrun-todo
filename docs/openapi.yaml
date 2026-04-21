@@ -1,0 +1,235 @@
+openapi: 3.0.3
+info:
+  title: TodoApp
+  version: "1.0.0"
+  description: Todo app to learn Go net/http and Google Cloud Run
+servers:
+  - url: http://127.0.0.1:8080
+paths:
+  /auth/google:
+    post:
+      operationId: authWithGoogle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - idToken
+              properties:
+                idToken:
+                  type: string
+                  description: "Google JWT token"
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              required: true
+              schema:
+                type: string
+                example: "Authorization: Bearer <token>"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "500":
+          description: "Internal Server Error - Failed to process the request"
+      security: [ ]
+
+  /tasks:
+    post:
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaskRequest"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "500":
+          description: "Internal Server Error - Failed to process the request"
+
+    get:
+      operationId: listTasks
+      responses:
+        "200":
+          description: Task list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskListResponse"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "500":
+          description: "Internal Server Error - Failed to process the request"
+
+  /tasks/{taskId}/status:
+    patch:
+      operationId: updateTaskStatus
+      parameters:
+        - $ref: "#/components/parameters/taskId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaskStatusRequest"
+      responses:
+        "200":
+          description: Task status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "400":
+          $ref: "#/components/responses/badRequest"
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "500":
+          description: "Internal Server Error - Failed to process the request"
+
+  /tasks/{taskId}:
+    delete:
+      operationId: deleteTask
+      parameters:
+        - $ref: "#/components/parameters/taskId"
+      responses:
+        "204":
+          description: Task soft deleted
+        "401":
+          $ref: "#/components/responses/unauthorized"
+        "404":
+          $ref: "#/components/responses/notFound"
+        "500":
+          description: "Internal Server Error - Failed to process the request"
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\""
+  parameters:
+    taskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Task ID
+
+  schemas:
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - completed
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          example: Buy milk
+        description:
+          type: string
+          nullable: true
+          example: Buy milk at the supermarket
+        completed:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Buy milk
+        description:
+          type: string
+          maxLength: 2000
+          example: Buy milk at the supermarket
+
+    UpdateTaskStatusRequest:
+      type: object
+      required:
+        - completed
+      properties:
+        completed:
+          type: boolean
+          example: true
+
+    TaskListResponse:
+      type: object
+      required:
+        - tasks
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Task"
+
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+  responses:
+    unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - message
+            properties:
+              message:
+                type: string
+
+    badRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    notFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
