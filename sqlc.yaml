@@ -1,0 +1,10 @@
+version: "2"
+
+sql:
+  - engine: "postgresql"
+    schema: "db/core.sql"
+    queries: "db/queries"
+    gen:
+      go:
+        package: "db"
+        out: "api/db"
