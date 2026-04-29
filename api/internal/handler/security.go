@@ -4,7 +4,6 @@ import(
 	"fmt"
 	"context"
 	"errors"
-	"os"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/SakamotoHiroya/go-cloudrun-todo/internal/api"
 )
@@ -30,7 +29,10 @@ func (h *Handler) HandleBearerAuth(
         return ctx, errors.New("missing token")
     }
 
-	secretKey := os.Getenv("SECRET_KEY")
+	secretKey := ""
+	if h.cfg != nil {
+		secretKey = h.cfg.JWTSecret
+	}
 
     token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
         if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
