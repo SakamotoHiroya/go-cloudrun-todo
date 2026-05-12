@@ -7,7 +7,33 @@ package db
 
 import (
 	"context"
+	"database/sql"
 )
+
+const createUserByGoogleSub = `-- name: CreateUserByGoogleSub :one
+insert into users (google_sub, name)
+values ($1, $2)
+returning id, google_sub, name, is_actice, created_at, updated_at
+`
+
+type CreateUserByGoogleSubParams struct {
+	GoogleSub string
+	Name      sql.NullString
+}
+
+func (q *Queries) CreateUserByGoogleSub(ctx context.Context, arg CreateUserByGoogleSubParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createUserByGoogleSub, arg.GoogleSub, arg.Name)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Name,
+		&i.IsActice,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
 
 const getUser = `-- name: GetUser :one
 select id, google_sub, name, is_actice, created_at, updated_at from users where id = $1
@@ -15,6 +41,24 @@ select id, google_sub, name, is_actice, created_at, updated_at from users where 
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 	row := q.db.QueryRowContext(ctx, getUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.GoogleSub,
+		&i.Name,
+		&i.IsActice,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByGoogleSub = `-- name: GetUserByGoogleSub :one
+select id, google_sub, name, is_actice, created_at, updated_at from users where google_sub = $1
+`
+
+func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByGoogleSub, googleSub)
 	var i User
 	err := row.Scan(
 		&i.ID,
