@@ -1,0 +1,34 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+*.swp
+*.swo
+*~
+
+# Local env (samples like .env.sample stay tracked)
+.env
+.env.local
+.env.*.local
+api/.env
+web/.env
+
+# Go
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+# Air (live reload) — if used later
+tmp/
+
+# Logs
+*.log
