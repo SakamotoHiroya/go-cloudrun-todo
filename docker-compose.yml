@@ -16,11 +16,10 @@ services:
       - "8080:8080"
     environment:
       PORT: 8080
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_USER: appuser
-      DB_PASSWORD: apppass
-      DB_NAME: appdb
+      DATABASE_URL: postgres://appuser:apppass@db:5432/appdb?sslmode=disable
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-replace-with-google-oauth-client-id}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me}
+      CORS_ORIGIN: http://localhost:3000
     depends_on:
       - db
 
@@ -34,6 +33,7 @@ services:
       POSTGRES_DB: appdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./db/core.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
 
 volumes:
   postgres_data:
