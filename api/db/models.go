@@ -7,13 +7,18 @@ package db
 import (
 	"database/sql"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Task struct {
-	ID          int64
-	UserID      interface{}
-	Content     string
+	ID          uuid.UUID
+	UserID      int64
+	Title       string
+	Description sql.NullString
 	IsCompleted bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type User struct {

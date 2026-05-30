@@ -7,36 +7,63 @@ package db
 
 import (
 	"context"
+	"database/sql"
+
+	"github.com/google/uuid"
 )
 
-const createTask = `-- name: CreateTask :exec
-insert into tasks(user_id, content) values($1, $2)
+const createTask = `-- name: CreateTask :one
+insert into tasks (user_id, title, description)
+values ($1, $2, $3)
+returning id, user_id, title, description, is_completed, created_at, updated_at
 `
 
 type CreateTaskParams struct {
-	UserID  interface{}
-	Content string
+	UserID      int64
+	Title       string
+	Description sql.NullString
 }
 
-func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) error {
-	_, err := q.db.ExecContext(ctx, createTask, arg.UserID, arg.Content)
-	return err
+func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
+	row := q.db.QueryRowContext(ctx, createTask, arg.UserID, arg.Title, arg.Description)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Description,
+		&i.IsCompleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
-const deleteTask = `-- name: DeleteTask :exec
-delete from tasks where id = $1
+const deleteTask = `-- name: DeleteTask :execrows
+delete from tasks where id = $1 and user_id = $2
 `
 
-func (q *Queries) DeleteTask(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deleteTask, id)
-	return err
+type DeleteTaskParams struct {
+	ID     uuid.UUID
+	UserID int64
+}
+
+func (q *Queries) DeleteTask(ctx context.Context, arg DeleteTaskParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, deleteTask, arg.ID, arg.UserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const getTasks = `-- name: GetTasks :many
-select id, user_id, content, is_completed from tasks where user_id = $1
+select id, user_id, title, description, is_completed, created_at, updated_at
+from tasks
+where user_id = $1
+order by created_at desc
 `
 
-func (q *Queries) GetTasks(ctx context.Context, userID interface{}) ([]Task, error) {
+func (q *Queries) GetTasks(ctx context.Context, userID int64) ([]Task, error) {
 	rows, err := q.db.QueryContext(ctx, getTasks, userID)
 	if err != nil {
 		return nil, err
@@ -48,8 +75,11 @@ func (q *Queries) GetTasks(ctx context.Context, userID interface{}) ([]Task, err
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.Content,
+			&i.Title,
+			&i.Description,
 			&i.IsCompleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -65,11 +95,14 @@ func (q *Queries) GetTasks(ctx context.Context, userID interface{}) ([]Task, err
 }
 
 const getTasksByStatus = `-- name: GetTasksByStatus :many
-select id, user_id, content, is_completed from tasks where user_id = $1 and is_completed = $2
+select id, user_id, title, description, is_completed, created_at, updated_at
+from tasks
+where user_id = $1 and is_completed = $2
+order by created_at desc
 `
 
 type GetTasksByStatusParams struct {
-	UserID      interface{}
+	UserID      int64
 	IsCompleted bool
 }
 
@@ -85,8 +118,11 @@ func (q *Queries) GetTasksByStatus(ctx context.Context, arg GetTasksByStatusPara
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
-			&i.Content,
+			&i.Title,
+			&i.Description,
 			&i.IsCompleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -101,16 +137,30 @@ func (q *Queries) GetTasksByStatus(ctx context.Context, arg GetTasksByStatusPara
 	return items, nil
 }
 
-const updateTaskStatus = `-- name: UpdateTaskStatus :exec
-update tasks set is_completed = $2 where id = $1
+const updateTaskStatus = `-- name: UpdateTaskStatus :one
+update tasks
+set is_completed = $2, updated_at = now()
+where id = $1 and user_id = $3
+returning id, user_id, title, description, is_completed, created_at, updated_at
 `
 
 type UpdateTaskStatusParams struct {
-	ID          int64
+	ID          uuid.UUID
 	IsCompleted bool
+	UserID      int64
 }
 
-func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateTaskStatus, arg.ID, arg.IsCompleted)
-	return err
+func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error) {
+	row := q.db.QueryRowContext(ctx, updateTaskStatus, arg.ID, arg.IsCompleted, arg.UserID)
+	var i Task
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Title,
+		&i.Description,
+		&i.IsCompleted,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

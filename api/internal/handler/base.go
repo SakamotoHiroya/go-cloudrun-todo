@@ -1,13 +1,22 @@
 package handler
 
 import (
+	"database/sql"
+
 	"github.com/SakamotoHiroya/go-cloudrun-todo/db"
 	"github.com/SakamotoHiroya/go-cloudrun-todo/internal/config"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Handler struct {
-	dbConn *pgxpool.Pool
+	dbConn *sql.DB
 	repo   *db.Queries
 	cfg    *config.Config
+}
+
+func New(sqlDB *sql.DB, cfg *config.Config) *Handler {
+	return &Handler{
+		dbConn: sqlDB,
+		repo:   db.New(sqlDB),
+		cfg:    cfg,
+	}
 }
