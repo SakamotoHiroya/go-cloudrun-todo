@@ -4,6 +4,7 @@ Thumbs.db
 
 # Editor / IDE
 .idea/
+.serena/
 *.swp
 *.swo
 *~
